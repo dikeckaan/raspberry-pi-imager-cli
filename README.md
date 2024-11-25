@@ -1,153 +1,108 @@
-# Raspberry Pi OS Installation Script
+# Raspberry Pi Setup Script
 
-## Overview
-
-This script automates the process of downloading an operating system image, preparing it, and flashing it to a target disk (e.g., an SSD or an SD card) for Raspberry Pi. Additionally, it configures the system to enable SSH, create a custom user, set the hostname, and add an SSH key for authentication.
+This script automates the process of preparing a bootable Raspberry Pi image and writing it to a specified disk. It includes error handling, disk validation, and user-friendly prompts to ensure a smooth experience.
 
 ---
 
 ## Features
-
-1. **Automatic OS Image Handling:**
-   - Downloads the specified OS image from a URL.
-   - Handles existing image files by allowing the user to overwrite or reuse them.
-   - Decompresses `.xz` compressed image files.
-
-2. **Disk Preparation:**
-   - Prompts the user to select a target disk.
-   - Warns about data loss before writing the image to the disk.
-
-3. **Post-Installation Configuration:**
-   - Enables SSH on boot.
-   - Sets a custom hostname.
-   - Creates a new user with sudo privileges.
-   - Adds an SSH public key for passwordless authentication.
+- Downloads and decompresses the Raspberry Pi image.
+- Validates existing files and allows users to overwrite or reuse them.
+- Lists available disks and validates user input.
+- Cleans the target disk before writing the image.
+- Configures SSH and `cloud-init` with user-defined parameters.
+- Handles invalid input and offers retry options.
 
 ---
 
-## Requirements
-
-- A Linux-based system (e.g., Raspberry Pi, Ubuntu, etc.).
-- `wget` and `xz-utils` installed. (Script will use `rm` and `dd` commands.)
-- Root or sudo access to write the OS image to a disk.
+## Prerequisites
+- A Linux system with `bash` shell.
+- Root privileges to write to disks and mount partitions.
+- Tools: `wget`, `xz-utils`, and `lsblk`.
 
 ---
 
 ## Usage
+1. Clone this repository or download the script.
+2. Make the script executable:
+   ```bash
+   chmod +x raspi_setup.sh
+   ```
+3. Run the script with root privileges:
+   ```bash
+   sudo ./raspi_setup.sh
+   ```
 
-### 1. Download the Script
+---
 
-Save the script to a file, e.g., `raspi_setup.sh`:
+## Configuration
+Before running the script, customize the following variables at the top of the `raspi_setup.sh` file:
+- `IMAGE_URL`: URL of the Raspberry Pi OS image to download.
+- `USERNAME`: Desired username for the Raspberry Pi.
+- `HOSTNAME`: Hostname for the Raspberry Pi.
+- `SSH_KEY`: Your public SSH key for secure access.
 
-```bash
-nano raspi_setup.sh
+---
+
+## Example Run (Terminal Output)
+Below is an example usage scenario. Replace this with your own terminal output.
+
+```plaintext
+kaandikec@pi5:~$ nano raspi_setup.sh
+kaandikec@pi5:~$ chmod +x raspi_setup.sh
+kaandikec@pi5:~$ sudo ./raspi_setup.sh 
+The image file 'os_image.img.xz' already exists.
+Do you want to overwrite it? (y/n): n
+Using the existing image file.
+=== Decompressing the image file ===
+The decompressed image file already exists. Overwriting...
+=== Listing available disks ===
+NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
+loop0         7:0    0  33.7M  1 loop /snap/snapd/21761
+mmcblk0     179:0    0  59.5G  0 disk 
+├─mmcblk0p1 179:1    0   512M  0 part 
+└─mmcblk0p2 179:2    0    59G  0 part /
+nvme0n1     259:0    0 931.5G  0 disk 
+├─nvme0n1p1 259:3    0   512M  0 part 
+└─nvme0n1p2 259:4    0   2.9G  0 part 
+Specify the target disk to write the image (e.g., /dev/sdX or /dev/nvmeX): nvme0n1
+Invalid disk device format. Please use a full path like /dev/sdX or /dev/nvmeX.
+Invalid input. Would you like to try again? (y/n): 
+y
+=== Listing available disks ===
+NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
+loop0         7:0    0  33.7M  1 loop /snap/snapd/21761
+mmcblk0     179:0    0  59.5G  0 disk 
+├─mmcblk0p1 179:1    0   512M  0 part 
+└─mmcblk0p2 179:2    0    59G  0 part /
+nvme0n1     259:0    0 931.5G  0 disk 
+├─nvme0n1p1 259:3    0   512M  0 part 
+└─nvme0n1p2 259:4    0   2.9G  0 part 
+Specify the target disk to write the image (e.g., /dev/sdX or /dev/nvmeX): /dev/nvme0n1
+Warning: Writing the image to /dev/nvme0n1 will erase all existing data on the disk.
+Are you sure you want to proceed? (y/n): y
+=== Cleaning the target disk ===
+100+0 records in
+100+0 records out
+104857600 bytes (105 MB, 100 MiB) copied, 0.412415 s, 254 MB/s
+=== Writing the image file to the disk ===
+3523215360 bytes (3.5 GB, 3.3 GiB) copied, 8 s, 440 MB/s3675607040 bytes (3.7 GB, 3.4 GiB) copied, 8.43806 s, 436 MB/s
+
+876+1 records in
+876+1 records out
+3675607040 bytes (3.7 GB, 3.4 GiB) copied, 10.4239 s, 353 MB/s
+=== Mounting the boot partition ===
+=== Enabling SSH ===
+=== Creating cloud-init configuration file ===
+=== Unmounting the boot partition ===
+=== Setup complete! You can now boot your Raspberry Pi with the configured SSD. ===
+kaandikec@pi5:~$ ^C
+kaandikec@pi5:~$ 
+...
 ```
-
-Paste the script content into the file and save.
-
-### 2. Make the Script Executable
-
-```bash
-chmod +x raspi_setup.sh
-```
-
-### 3. Run the Script
-
-```bash
-sudo ./raspi_setup.sh
-```
-
----
-
-## How It Works
-
-### Step 1: OS Image Handling
-
-1. The script checks if the OS image file (`os_image.img.xz`) already exists in the current directory:
-   - If the file exists, the user is asked whether to overwrite it or reuse it.
-   - If the user chooses to overwrite, the existing file is deleted, and the script downloads a fresh copy.
-   - If the user chooses to reuse the file, the script ensures the decompressed `.img` file exists before proceeding.
-
-2. The script decompresses the `.xz` file to an `.img` file using the `xz` utility.
-
----
-
-### Step 2: Disk Selection and Writing
-
-1. The script lists all available disks using `lsblk`, helping the user identify the correct target disk.
-2. The user is prompted to specify the target disk (e.g., `/dev/sdX` or `/dev/nvmeX`).
-3. A final warning about data loss is displayed before writing the image to the disk.
-4. The `dd` command is used to write the image to the specified disk with a block size of 4MB, ensuring efficient performance.
-
----
-
-### Step 3: Post-Installation Configuration
-
-1. The script mounts the boot partition of the target disk to `/mnt`.
-2. It enables SSH by creating an empty `ssh` file in the boot partition.
-3. A `cloud-init` configuration file (`user-data`) is created in the boot partition to:
-   - Set a custom hostname.
-   - Create a new user with sudo privileges.
-   - Add an SSH public key for passwordless login.
-
----
-
-## Variables
-
-You can customize the following variables in the script to fit your needs:
-
-- `IMAGE_URL`: The URL of the OS image to download (default is Ubuntu Server for Raspberry Pi).
-- `IMAGE_NAME`: The name of the downloaded image file (default is `os_image.img.xz`).
-- `USERNAME`: The name of the user to create (default is `kaandikec`).
-- `HOSTNAME`: The hostname of the system (default is `pi5`).
-- `SSH_KEY`: The SSH public key to add for the created user.
-
----
-
-## Example Usage
-
-### Scenario 1: Fresh Download and Install
-
-Run the script on a system without the image file. The script will:
-- Download the image from the specified URL.
-- Decompress it.
-- Write it to the selected disk.
-
-### Scenario 2: Reuse Existing Image File
-
-If the image file (`os_image.img.xz`) already exists:
-- The script asks if you want to overwrite or reuse the file.
-- If reusing, it ensures the decompressed `.img` file exists.
 
 ---
 
 ## Notes
+- Ensure you specify the correct disk device to avoid accidental data loss.
+- If you encounter issues, ensure all dependencies are installed and run the script with `sudo`.
 
-1. **Data Loss Warning:** Writing the OS image to a disk will erase all data on the target disk. Be sure to select the correct disk.
-2. **Network Speed:** Download speed depends on your internet connection and the server hosting the OS image.
-3. **Dependencies:** Ensure the following tools are installed on your system:
-   - `wget` (for downloading files)
-   - `xz-utils` (for decompressing files)
-   - `lsblk` (for listing disks)
-
----
-
-## Troubleshooting
-
-1. **Slow Downloads:** If downloads are slow, try a different mirror for the `IMAGE_URL`.
-2. **Permission Denied Errors:** Ensure the script is run with `sudo` to allow access to protected system files and disks.
-3. **Image File Errors:** If the decompressed image file is missing, ensure there is enough disk space and no interruptions during decompression.
-
----
-
-## Future Enhancements
-
-- Support for additional compression formats (e.g., `.gz`).
-- Auto-detection of the correct disk based on connected devices.
-- Optional configuration of Wi-Fi credentials in the `cloud-init` file.
-
----
-
-## License
-
-This script is provided as-is with no warranties. Use at your own risk.
